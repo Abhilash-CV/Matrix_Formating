@@ -11,7 +11,7 @@ st.markdown("<h2 style='text-align:center;'>Category-wise distribution of the Se
 st.write("")
 
 # ============================
-# COLLEGE MAPPING (Your Mapping)
+# COLLEGE MAPPING
 # ============================
 college_map = {
     "ALB": "College of Pharmaceutical Sciences, Alappuzha",
@@ -84,100 +84,107 @@ uploaded = st.file_uploader("Upload Seat Matrix Excel", type=["xlsx"])
 if uploaded:
 
     df = pd.read_excel(uploaded)
-    df = df[df["Program"].notna()]
+    df = df[df["Program"].notna()]  # remove totals/footer
 
+    # Correct category mapping
     CATEGORY_MAP = {
-        "SM":"SM","EW":"EWS","SC":"SC","ST":"ST",
-        "EZ":"EZ","MU":"MU","BH":"BH","LA":"LA",
-        "BX":"BX","KU":"KU","DV":"SQ","KN":"SQ"
+        "BH": "BH", "BX": "BX", "DV": "DV", "EW": "EWS", "EZ": "EZ",
+        "KN": "KN", "KU": "KU", "LA": "LA", "MU": "MU",
+        "SC": "SC", "SM": "SM", "ST": "ST", "VK": "VK"
     }
 
     MAIN_COLS = [
-        "Course","Seats","SQ","SM","EWS","SC","ST","EZ","MU",
-        "BH","LA","BX","KU",
-        "SM-PD","EWS-PD","SC-PD","ST-PD","EZ-PD","MU-PD","BH-PD","LA-PD","BX-PD"
+        "Course", "Seats",
+        "BH", "BX", "DV", "EWS", "EZ", "KN", "KU", "LA", "MU", "SC", "SM", "ST", "VK",
+        "SM-PD", "EWS-PD", "SC-PD", "ST-PD", "EZ-PD", "MU-PD",
+        "BH-PD", "LA-PD", "BX-PD"
     ]
 
+    # Build rows
     rows = []
     for _, r in df.iterrows():
-        row={"College":r["College"],"Course":r["Specialty"]}
-        for old,new in CATEGORY_MAP.items():
-            row[new]=r.get(old,0)
+        row = {"College": r["College"], "Course": r["Specialty"]}
+
+        # add categories
+        for old, new in CATEGORY_MAP.items():
+            row[new] = r.get(old, 0)
+
+        # PD columns
         for p in ["SM-PD","EWS-PD","SC-PD","ST-PD","EZ-PD","MU-PD","BH-PD","LA-PD","BX-PD"]:
-            row[p]=0
-        row["Seats"]=sum(row.get(c,0) for c in ["SM","EWS","SC","ST","EZ","MU","BH","DV","LA","VK","BX","KU","KN"])
+            row[p] = 0
+
+        # Seats total
+        row["Seats"] = sum(row.get(c, 0) for c in 
+                           ["BH","BX","DV","EWS","EZ","KN","KU","LA","MU","SC","SM","ST","VK"])
+
         rows.append(row)
 
-    result=pd.DataFrame(rows)
+    result = pd.DataFrame(rows)
 
     # ============================================================
-    # EXCEL FORMATTING FIXED
+    # EXCEL FORMATTING
     # ============================================================
-    wb=openpyxl.Workbook()
-    ws=wb.active
-    ws.title="Seat Distribution"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Seat Distribution"
 
-    border=Border(left=Side(style='thin'),right=Side(style='thin'),
-                  top=Side(style='thin'),bottom=Side(style='thin'))
+    border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                    top=Side(style='thin'), bottom=Side(style='thin'))
 
-    # COLORS & FONTS
-    fill_college=PatternFill(fgColor="C65911", fill_type="solid")
-    fill_header=PatternFill(fgColor="F4B183", fill_type="solid")
-    fill_highlight=PatternFill(fgColor="F8CBAD", fill_type="solid")
+    fill_college = PatternFill(fgColor="C65911", fill_type="solid")
+    fill_header = PatternFill(fgColor="F4B183", fill_type="solid")
+    fill_highlight = PatternFill(fgColor="F8CBAD", fill_type="solid")
 
-    font_normal=Font(name="Times New Roman", size=12)
-    font_bold=Font(name="Times New Roman", size=12, bold=True)
-    font_white_bold=Font(name="Times New Roman", size=12, bold=True, color="FFFFFF")
+    font_normal = Font(name="Times New Roman", size=12)
+    font_bold = Font(name="Times New Roman", size=12, bold=True)
+    font_white_bold = Font(name="Times New Roman", size=12, bold=True, color="FFFFFF")
 
-    row_pos=1
+    row_pos = 1
 
     for col in result["College"].unique():
 
-        cname=college_map.get(col,col)
+        cname = college_map.get(col, col)
 
-        # COLLEGE TITLE
-        ws.merge_cells(start_row=row_pos,start_column=1,end_row=row_pos,end_column=len(MAIN_COLS))
-        t=ws.cell(row=row_pos,column=1)
-        t.value=f"{col}: {cname}"
-        t.font=font_white_bold
-        t.fill=fill_college
-        t.alignment=Alignment(horizontal="center")
-        row_pos+=1
+        ws.merge_cells(start_row=row_pos, start_column=1,
+                       end_row=row_pos, end_column=len(MAIN_COLS))
+        t = ws.cell(row=row_pos, column=1)
+        t.value = f"{col}: {cname}"
+        t.font = font_white_bold
+        t.fill = fill_college
+        t.alignment = Alignment(horizontal="center")
+        row_pos += 1
 
-        # HEADER ROW
-        for i,h in enumerate(MAIN_COLS,start=1):
-            c=ws.cell(row=row_pos,column=i)
-            c.value=h
-            c.font=font_bold
-            c.fill=fill_header
-            c.border=border
-            c.alignment=Alignment(horizontal="center")
-        row_pos+=1
+        # HEADER
+        for i, h in enumerate(MAIN_COLS, start=1):
+            c = ws.cell(row=row_pos, column=i)
+            c.value = h
+            c.font = font_bold
+            c.fill = fill_header
+            c.border = border
+            c.alignment = Alignment(horizontal="center")
+        row_pos += 1
 
         # DATA
-        block=result[result["College"]==col][MAIN_COLS]
-        total=block.sum(numeric_only=True)
-        total["Course"]="Total"
-        block=pd.concat([block,total.to_frame().T],ignore_index=True)
+        block = result[result["College"] == col][MAIN_COLS]
+        total = block.sum(numeric_only=True)
+        total["Course"] = "Total"
+        block = pd.concat([block, total.to_frame().T], ignore_index=True)
 
         for r in block.itertuples(index=False):
-            row_pos+=1
-            for idx,v in enumerate(r,start=1):
-                cell=ws.cell(row=row_pos,column=idx)
-                cell.value=v
-                cell.border=border
-                cell.alignment=Alignment(horizontal="center")
+            row_pos += 1
+            for idx, v in enumerate(r, start=1):
+                cell = ws.cell(row=row_pos, column=idx)
+                cell.value = v
+                cell.border = border
+                cell.alignment = Alignment(horizontal="center")
+                cell.font = font_bold if isinstance(v, (int, float)) and v > 0 else font_normal
+                if isinstance(v, (int, float)) and v > 0:
+                    cell.fill = fill_highlight
 
-                if isinstance(v,(int,float)) and v>0:
-                    cell.fill=fill_highlight
-                    cell.font=font_bold
-                else:
-                    cell.font=font_normal
+        row_pos += 2
 
-        row_pos+=2
-
-    # DOWNLOAD
-    buf=io.BytesIO()
+    # DOWNLOAD EXCEL
+    buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)
 
