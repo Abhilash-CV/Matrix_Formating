@@ -2,8 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import openpyxl
-from openpyxl.styles import Font, Alignment, Border, Side
-from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 import io
 
 st.set_page_config(layout="wide")
@@ -83,108 +82,108 @@ college_map = {
 uploaded = st.file_uploader("Upload Seat Matrix Excel", type=["xlsx"])
 
 if uploaded:
+
     df = pd.read_excel(uploaded)
-    df = df[df["Program"].notna()]  # remove footer rows
+    df = df[df["Program"].notna()]
 
     CATEGORY_MAP = {
-        "SM": "SM", "EW": "EWS", "SC": "SC", "ST": "ST",
-        "EZ": "EZ", "MU": "MU", "BH": "BH", "LA": "LA",
-        "BX": "BX", "KU": "KU", "DV": "SQ", "KN": "SQ"
+        "SM":"SM","EW":"EWS","SC":"SC","ST":"ST",
+        "EZ":"EZ","MU":"MU","BH":"BH","LA":"LA",
+        "BX":"BX","KU":"KU","DV":"SQ","KN":"SQ"
     }
 
     MAIN_COLS = [
-        "Course", "Seats", "SQ", "SM", "EWS", "SC", "ST", "EZ", "MU",
-        "BH", "LA", "BX", "KU",
-        "SM-PD", "EWS-PD", "SC-PD", "ST-PD", "EZ-PD",
-        "MU-PD", "BH-PD", "LA-PD", "BX-PD"
+        "Course","Seats","SQ","SM","EWS","SC","ST","EZ","MU",
+        "BH","LA","BX","KU",
+        "SM-PD","EWS-PD","SC-PD","ST-PD","EZ-PD","MU-PD","BH-PD","LA-PD","BX-PD"
     ]
 
     rows = []
     for _, r in df.iterrows():
-        row = {"College": r["College"], "Course": r["Specialty"]}
-        for old, new in CATEGORY_MAP.items():
-            row[new] = r.get(old, 0)
-        for col in ["SM-PD","EWS-PD","SC-PD","ST-PD","EZ-PD",
-                    "MU-PD","BH-PD","LA-PD","BX-PD"]:
-            row[col] = 0
-        row["Seats"] = sum(row.get(c, 0) for c in
-                           ["SQ","SM","EWS","SC","ST","EZ","MU","BH","LA","BX","KU"])
+        row={"College":r["College"],"Course":r["Specialty"]}
+        for old,new in CATEGORY_MAP.items():
+            row[new]=r.get(old,0)
+        for p in ["SM-PD","EWS-PD","SC-PD","ST-PD","EZ-PD","MU-PD","BH-PD","LA-PD","BX-PD"]:
+            row[p]=0
+        row["Seats"]=sum(row.get(c,0) for c in ["SQ","SM","EWS","SC","ST","EZ","MU","BH","LA","BX","KU"])
         rows.append(row)
 
-    result = pd.DataFrame(rows)
+    result=pd.DataFrame(rows)
 
     # ============================================================
-    # Display formatted tables in Streamlit (as earlier)
+    # EXCEL FORMATTING FIXED
     # ============================================================
-    for col in result["College"].unique():
-        cname = college_map.get(col, col)
-        st.markdown(f"<h4 style='text-align:center;'>{col} : {cname}</h4>", unsafe_allow_html=True)
-        block = result[result["College"] == col][MAIN_COLS]
-        total = block.sum(numeric_only=True)
-        total["Course"] = "Total"
-        block = pd.concat([block, total.to_frame().T], ignore_index=True)
-        st.dataframe(block, use_container_width=True)
+    wb=openpyxl.Workbook()
+    ws=wb.active
+    ws.title="Seat Distribution"
 
-    # ============================================================
-    # Generate Excel (formatted)
-    # ============================================================
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Seat Distribution"
+    border=Border(left=Side(style='thin'),right=Side(style='thin'),
+                  top=Side(style='thin'),bottom=Side(style='thin'))
 
-    border = Border(left=Side(style='thin'), right=Side(style='thin'),
-                    top=Side(style='thin'), bottom=Side(style='thin'))
+    # COLORS & FONTS
+    fill_college=PatternFill(fgColor="C65911", fill_type="solid")
+    fill_header=PatternFill(fgColor="F4B183", fill_type="solid")
+    fill_highlight=PatternFill(fgColor="F8CBAD", fill_type="solid")
 
-    row_pos = 1
+    font_normal=Font(name="Times New Roman", size=12)
+    font_bold=Font(name="Times New Roman", size=12, bold=True)
+    font_white_bold=Font(name="Times New Roman", size=12, bold=True, color="FFFFFF")
+
+    row_pos=1
 
     for col in result["College"].unique():
-        cname = college_map.get(col, col)
 
-        # College Header
-        ws.merge_cells(start_row=row_pos, start_column=1, end_row=row_pos, end_column=len(MAIN_COLS))
-        ws.cell(row=row_pos, column=1).value = f"{col} : {cname}"
-        ws.cell(row=row_pos, column=1).font = Font(bold=True, size=13)
-        ws.cell(row=row_pos, column=1).alignment = Alignment(horizontal="center")
-        row_pos += 2
+        cname=college_map.get(col,col)
 
-        # Block Table
-        block = result[result["College"] == col][MAIN_COLS]
-        total = block.sum(numeric_only=True)
-        total["Course"] = "Total"
-        block = pd.concat([block, total.to_frame().T], ignore_index=True)
+        # COLLEGE TITLE
+        ws.merge_cells(start_row=row_pos,start_column=1,end_row=row_pos,end_column=len(MAIN_COLS))
+        t=ws.cell(row=row_pos,column=1)
+        t.value=f"{col}: {cname}"
+        t.font=font_white_bold
+        t.fill=fill_college
+        t.alignment=Alignment(horizontal="center")
+        row_pos+=1
 
-        for r in dataframe_to_rows(block, index=False, header=True):
-            ws.append(r)
-            for c in range(1, len(r) + 1):
-                ws.cell(row=row_pos, column=c).border = border
-            row_pos += 1
+        # HEADER ROW
+        for i,h in enumerate(MAIN_COLS,start=1):
+            c=ws.cell(row=row_pos,column=i)
+            c.value=h
+            c.font=font_bold
+            c.fill=fill_header
+            c.border=border
+            c.alignment=Alignment(horizontal="center")
+        row_pos+=1
 
-        row_pos += 2  # spacing
+        # DATA
+        block=result[result["College"]==col][MAIN_COLS]
+        total=block.sum(numeric_only=True)
+        total["Course"]="Total"
+        block=pd.concat([block,total.to_frame().T],ignore_index=True)
 
-    # ===== FINAL GRAND TOTAL =====
-    gtotal = result[MAIN_COLS].sum(numeric_only=True)
-    gtotal["Course"] = "Grand Total"
-    gtdf = pd.DataFrame([gtotal])
+        for r in block.itertuples(index=False):
+            row_pos+=1
+            for idx,v in enumerate(r,start=1):
+                cell=ws.cell(row=row_pos,column=idx)
+                cell.value=v
+                cell.border=border
+                cell.alignment=Alignment(horizontal="center")
 
-    ws.append([])
-    row_pos += 1
-    ws.append(["Grand Total"])
-    ws.cell(row=row_pos, column=1).font = Font(bold=True, size=13)
-    row_pos += 1
+                if isinstance(v,(int,float)) and v>0:
+                    cell.fill=fill_highlight
+                    cell.font=font_bold
+                else:
+                    cell.font=font_normal
 
-    for r in dataframe_to_rows(gtdf, index=False, header=True):
-        ws.append(r)
-        for c in range(1, len(r) + 1):
-            ws.cell(row=row_pos, column=c).border = border
-        row_pos += 1
+        row_pos+=2
 
-    # Streamlit Download
-    excel_buffer = io.BytesIO()
-    wb.save(excel_buffer)
+    # DOWNLOAD
+    buf=io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
 
     st.download_button(
-        "📥 Download Excel (Formatted – Single Sheet)",
-        data=excel_buffer.getvalue(),
+        "📥 Download Excel (Formatted – Screenshot Style)",
+        data=buf.getvalue(),
         file_name="Seat_Distribution.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
