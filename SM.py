@@ -109,7 +109,7 @@ if uploaded:
             row[new]=r.get(old,0)
         for pd in ["SM-PD","EWS-PD","SC-PD","ST-PD","EZ-PD","MU-PD","BH-PD","LA-PD","BX-PD"]:
             row[pd]=0
-        row["Seats"]=sum(row.get(c,0) for c in ["SQ","SM","EWS","SC","ST","EZ","MU","BH","LA","BX","KU"])
+        row["Seats"]=sum(row.get(c,0) for c in ["SM","EWS","SC","ST","EZ","MU","BH","DV","LA","BX","KU","KN"])
         rows.append(row)
 
     result=pd.DataFrame(rows)
