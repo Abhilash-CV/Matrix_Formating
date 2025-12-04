@@ -81,9 +81,6 @@ college_map = {
 
 uploaded = st.file_uploader("Upload Seat Matrix Excel", type=["xlsx"])
 
-# ============================================================
-# PROCESS INPUT
-# ============================================================
 if uploaded:
 
     df = pd.read_excel(uploaded)
@@ -98,36 +95,23 @@ if uploaded:
     MAIN_COLS = [
         "Course","Seats","SQ","SM","EWS","SC","ST","EZ","MU",
         "BH","LA","BX","KU",
-        "SM-PD","EWS-PD","SC-PD","ST-PD","EZ-PD",
-        "MU-PD","BH-PD","LA-PD","BX-PD"
+        "SM-PD","EWS-PD","SC-PD","ST-PD","EZ-PD","MU-PD","BH-PD","LA-PD","BX-PD"
     ]
 
-    rows=[]
-    for _,r in df.iterrows():
+    rows = []
+    for _, r in df.iterrows():
         row={"College":r["College"],"Course":r["Specialty"]}
         for old,new in CATEGORY_MAP.items():
             row[new]=r.get(old,0)
-        for pd in ["SM-PD","EWS-PD","SC-PD","ST-PD","EZ-PD","MU-PD","BH-PD","LA-PD","BX-PD"]:
-            row[pd]=0
-        row["Seats"]=sum(row.get(c,0) for c in ["SM","EWS","SC","ST","EZ","MU","BH","DV","LA","BX","KU","KN"])
+        for p in ["SM-PD","EWS-PD","SC-PD","ST-PD","EZ-PD","MU-PD","BH-PD","LA-PD","BX-PD"]:
+            row[p]=0
+        row["Seats"]=sum(row.get(c,0) for c in ["SM","EWS","SC","ST","EZ","MU","BH","DV","LA","VK","BX","KU","KN"])
         rows.append(row)
 
     result=pd.DataFrame(rows)
 
     # ============================================================
-    # DISPLAY IN STREAMLIT
-    # ============================================================
-    for col in result["College"].unique():
-        cname = college_map.get(col, col)
-        st.markdown(f"<h4 style='text-align:center;'>{col} : {cname}</h4>", unsafe_allow_html=True)
-        block = result[result["College"]==col][MAIN_COLS]
-        total = block.sum(numeric_only=True)
-        total["Course"]="Total"
-        block = pd.concat([block,total.to_frame().T],ignore_index=True)
-        st.dataframe(block,use_container_width=True)
-
-    # ============================================================
-    # CREATE EXCEL WITH FORMATTING
+    # EXCEL FORMATTING FIXED
     # ============================================================
     wb=openpyxl.Workbook()
     ws=wb.active
@@ -136,22 +120,20 @@ if uploaded:
     border=Border(left=Side(style='thin'),right=Side(style='thin'),
                   top=Side(style='thin'),bottom=Side(style='thin'))
 
-    fill_college=PatternFill(fgColor="C65911",fill_type="solid")
-    fill_header=PatternFill(fgColor="F4B183",fill_type="solid")
-    fill_highlight=PatternFill(fgColor="F8CBAD",fill_type="solid")
+    # COLORS & FONTS
+    fill_college=PatternFill(fgColor="C65911", fill_type="solid")
+    fill_header=PatternFill(fgColor="F4B183", fill_type="solid")
+    fill_highlight=PatternFill(fgColor="F8CBAD", fill_type="solid")
 
-    font_normal=Font(name="Times New Roman",size=12)
-    font_bold=Font(name="Times New Roman",size=12,bold=True)
-    font_white_bold=Font(name="Times New Roman",size=12,bold=True,color="FFFFFF")
+    font_normal=Font(name="Times New Roman", size=12)
+    font_bold=Font(name="Times New Roman", size=12, bold=True)
+    font_white_bold=Font(name="Times New Roman", size=12, bold=True, color="FFFFFF")
 
     row_pos=1
 
-    # ============================================================
-    # PER COLLEGE BLOCK
-    # ============================================================
     for col in result["College"].unique():
 
-        cname = college_map.get(col, col)
+        cname=college_map.get(col,col)
 
         # COLLEGE TITLE
         ws.merge_cells(start_row=row_pos,start_column=1,end_row=row_pos,end_column=len(MAIN_COLS))
@@ -172,11 +154,11 @@ if uploaded:
             c.alignment=Alignment(horizontal="center")
         row_pos+=1
 
-        # DATA ROWS
-        block = result[result["College"]==col][MAIN_COLS]
-        total = block.sum(numeric_only=True)
+        # DATA
+        block=result[result["College"]==col][MAIN_COLS]
+        total=block.sum(numeric_only=True)
         total["Course"]="Total"
-        block = pd.concat([block, total.to_frame().T], ignore_index=True)
+        block=pd.concat([block,total.to_frame().T],ignore_index=True)
 
         for r in block.itertuples(index=False):
             row_pos+=1
@@ -194,56 +176,13 @@ if uploaded:
 
         row_pos+=2
 
-    # ============================================================
-    # GRAND TOTAL SECTION
-    # ============================================================
-    grand = result[MAIN_COLS].sum(numeric_only=True)
-    grand["Course"] = "Grand Total"
-    grand_df = pd.DataFrame([grand])
-
-    # GRAND TITLE
-    ws.merge_cells(start_row=row_pos,start_column=1,end_row=row_pos,end_column=len(MAIN_COLS))
-    gtitle = ws.cell(row=row_pos,column=1)
-    gtitle.value = "GRAND TOTAL"
-    gtitle.font = font_white_bold
-    gtitle.fill = fill_college
-    gtitle.alignment = Alignment(horizontal="center")
-    row_pos += 1
-
-    # GRAND HEADER
-    for i, h in enumerate(MAIN_COLS, start=1):
-        c = ws.cell(row=row_pos, column=i)
-        c.value = h
-        c.font = font_bold
-        c.fill = fill_header
-        c.border = border
-        c.alignment = Alignment(horizontal="center")
-    row_pos += 1
-
-    # GRAND TOTAL ROW
-    for r in grand_df.itertuples(index=False):
-        row_pos += 1
-        for idx, v in enumerate(r, start=1):
-            cell = ws.cell(row=row_pos, column=idx)
-            cell.value = v
-            cell.border = border
-            cell.alignment = Alignment(horizontal="center")
-
-            if isinstance(v, (int, float)) and v > 0:
-                cell.fill = fill_highlight
-                cell.font = font_bold
-            else:
-                cell.font = font_normal
-
-    # ============================================================
-    # DOWNLOAD BUTTON
-    # ============================================================
+    # DOWNLOAD
     buf=io.BytesIO()
     wb.save(buf)
     buf.seek(0)
 
     st.download_button(
-        "📥 Download Excel (Formatted – Single Sheet + GRAND TOTAL)",
+        "📥 Download Excel (Formatted – Screenshot Style)",
         data=buf.getvalue(),
         file_name="Seat_Distribution.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
