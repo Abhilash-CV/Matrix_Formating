@@ -1,34 +1,36 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import base64
+import openpyxl
+from openpyxl.styles import Font, Alignment, Border, Side
+from openpyxl.utils.dataframe import dataframe_to_rows
 import io
 
 st.set_page_config(layout="wide")
 
-st.markdown("<h2 style='text-align:center;'>Category-wise distribution of the Seats in Government & Private PHARMACY Colleges</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align:center;'>Category-wise distribution of the Seats in PHARMACY Colleges</h2>", unsafe_allow_html=True)
 st.write("")
 
 # ============================
-# COLLEGE MAPPING (Paste your mapping here)
+# COLLEGE MAPPING (Your Mapping)
 # ============================
 college_map = {
     "ALB": "College of Pharmaceutical Sciences, Alappuzha",
     "AMB": "College of Pharmaceutical Sciences, Kannur",
-    "KKB": "College of Pharmaceutical Sciences, Kozhikkode",
+    "KKB": "College of Pharmaceutical Sciences, Kozhikode",
     "KTB": "College of Pharmaceutical Sciences, Kottayam",
     "TVB": "College of Pharmaceutical Sciences, Thiruvananthapuram",
     "AAB": "Al-Azhar College of Pharmacy, Thodupuzha",
-    "AFB": "Al Shifa College of Pharmacy, Poonthavanam, Perinthalmanna",
-    "AHB": "Ahalia School of Pharmacy, Kozhipara, Palakkad",
-    "CAB": "Caritas College of Pharmacy, Ettumanoor, Kottayam",
-    "CCB": "Chemists College of Pharmaceutical Sciences & Research, Ernakulam",
+    "AFB": "Al Shifa College of Pharmacy, Perinthalmanna",
+    "AHB": "Ahalia School of Pharmacy, Palakkad",
+    "CAB": "Caritas College of Pharmacy, Kottayam",
+    "CCB": "Chemists College of Pharmaceutical Sciences, Ernakulam",
     "CHB": "MGM College of Pharmaceutical Sciences, Malappuram",
     "CRB": "Crescent College of Pharmaceutical Sciences, Kannur",
     "DAB": "Devaki Amma Memorial College of Pharmacy, Malappuram",
     "DMB": "Dr. Moopen's College of Pharmacy, Wayanad",
     "DPB": "Department of Pharmaceutical Science, Ettumanoor",
-    "DVB": "Dale View College of Pharmacy & Research Centre, TVM",
+    "DVB": "Dale View College of Pharmacy, TVM",
     "ECB": "Ezhuthachan College of Pharmaceutical Science, TVM",
     "EPB": "Elims College of Pharmacy, Thrissur",
     "GCB": "Grace College of Pharmacy, Palakkad",
@@ -50,27 +52,27 @@ college_map = {
     "LIB": "Lisie College of Pharmacy, Ernakulam",
     "MAB": "Malabar College of Pharmacy, Malappuram",
     "MCB": "Moulana College of Pharmacy, Malappuram",
-    "MDB": "Mar Dioscorus College of Pharmacy, Thiruvananthapuram",
+    "MDB": "Mar Dioscorus College of Pharmacy, TVM",
     "MEB": "MET's College of Pharmaceutical Sciences, Thrissur",
     "MGB": "MGM Silver Jubilee College of Pharmacy, Ernakulam",
-    "MGK": "MGM Silver Jubilee College of Pharmacy, Thiruvananthapuram",
+    "MGK": "MGM Silver Jubilee College of Pharmacy, TVM",
     "MGR": "MGM College of Pharmacy, Kannur",
     "MKB": "Malik Deenar College of Pharmacy, Kasaragod",
     "MLB": "Madin College of Pharmacy, Malappuram",
     "MMB": "Mookambika College of Pharmaceutical Sciences, Muvattupuzha",
-    "MPB": "Dr Joseph Mar Thoma Institute of Pharmaceutical Sciences, Kattanam",
-    "MZB": "Mount Zion College of Pharmaceutical Science, Adoor",
-    "NAB": "Nazareth College of Pharmacy, Pathanamthitta",
+    "MPB": "Dr Joseph Mar Thoma Institute, Kattanam",
+    "MZB": "Mount Zion College of Pharmacy, Adoor",
     "NCB": "Nehru College of Pharmacy, Thrissur",
+    "NAB": "Nazareth College of Pharmacy, Pathanamthitta",
     "NEB": "Nirmala College of Health Science, Thrissur",
     "NMB": "Nirmala College of Pharmacy, Ernakulam",
     "NPB": "National College of Pharmacy, Kozhikode",
     "PCB": "Pushpagiri College of Pharmacy, Pathanamthitta",
     "PPB": "Prime College of Pharmacy, Palakkad",
     "RGB": "Rajiv Gandhi Institute of Pharmacy, Kasaragod",
-    "RIB": "Dept of Pharmaceutical Science, Kottayam",
-    "SCB": "St. Joseph's College of Pharmacy, Alappuzha",
-    "SJB": "St. John's College of Pharmaceutical Sciences, Idukki",
+    "RIB": "Department of Pharmaceutical Science, Kottayam",
+    "SCB": "St Joseph's College of Pharmacy, Alappuzha",
+    "SJB": "St John's College of Pharmaceutical Sciences, Idukki",
     "SKP": "Sree Krishna College of Pharmacy, TVM",
     "SPB": "Sanjoe College of Pharmaceutical Studies, Palakkad",
     "STB": "Sree Gokulam SNGM College of Pharmacy, Alappuzha",
@@ -78,29 +80,16 @@ college_map = {
     "WSB": "Westfort College of Pharmacy, Thrissur"
 }
 
-# ============================
-# File Upload
-# ============================
 uploaded = st.file_uploader("Upload Seat Matrix Excel", type=["xlsx"])
 
 if uploaded:
-    
     df = pd.read_excel(uploaded)
-    df = df[df["Program"].notna()]  # remove footer
+    df = df[df["Program"].notna()]  # remove footer rows
 
     CATEGORY_MAP = {
-        "SM": "SM",
-        "EW": "EWS",
-        "SC": "SC",
-        "ST": "ST",
-        "EZ": "EZ",
-        "MU": "MU",
-        "BH": "BH",
-        "LA": "LA",
-        "BX": "BX",
-        "KU": "KU",
-        "DV": "SQ",
-        "KN": "SQ"
+        "SM": "SM", "EW": "EWS", "SC": "SC", "ST": "ST",
+        "EZ": "EZ", "MU": "MU", "BH": "BH", "LA": "LA",
+        "BX": "BX", "KU": "KU", "DV": "SQ", "KN": "SQ"
     }
 
     MAIN_COLS = [
@@ -110,50 +99,92 @@ if uploaded:
         "MU-PD", "BH-PD", "LA-PD", "BX-PD"
     ]
 
-    out_rows = []
-
+    rows = []
     for _, r in df.iterrows():
-        row = {"Course": r["Specialty"], "College": r["College"]}
-
+        row = {"College": r["College"], "Course": r["Specialty"]}
         for old, new in CATEGORY_MAP.items():
-            row[new] = row.get(new, 0) + r.get(old, 0)
-
+            row[new] = r.get(old, 0)
         for col in ["SM-PD","EWS-PD","SC-PD","ST-PD","EZ-PD",
                     "MU-PD","BH-PD","LA-PD","BX-PD"]:
             row[col] = 0
-
         row["Seats"] = sum(row.get(c, 0) for c in
                            ["SQ","SM","EWS","SC","ST","EZ","MU","BH","LA","BX","KU"])
-        out_rows.append(row)
+        rows.append(row)
 
-    result = pd.DataFrame(out_rows)
-    result = result[["College"] + MAIN_COLS]
+    result = pd.DataFrame(rows)
 
-    # =============================
-    # DISPLAY EXACT FORMAT (SCREEN)
-    # =============================
-
-    for college in result["College"].unique():
-        block = result[result["College"] == college].copy()
-
-        cname = college_map.get(college, college)
-
-        st.markdown(
-            f"<h4 style='text-align:center; margin-top:30px;'>{college} : {cname}</h4>",
-            unsafe_allow_html=True
-        )
-
-        block = block[MAIN_COLS]
+    # ============================================================
+    # Display formatted tables in Streamlit (as earlier)
+    # ============================================================
+    for col in result["College"].unique():
+        cname = college_map.get(col, col)
+        st.markdown(f"<h4 style='text-align:center;'>{col} : {cname}</h4>", unsafe_allow_html=True)
+        block = result[result["College"] == col][MAIN_COLS]
         total = block.sum(numeric_only=True)
         total["Course"] = "Total"
-
         block = pd.concat([block, total.to_frame().T], ignore_index=True)
-
         st.dataframe(block, use_container_width=True)
 
-    # GRAND TOTAL
+    # ============================================================
+    # Generate Excel (formatted)
+    # ============================================================
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Seat Distribution"
+
+    border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                    top=Side(style='thin'), bottom=Side(style='thin'))
+
+    row_pos = 1
+
+    for col in result["College"].unique():
+        cname = college_map.get(col, col)
+
+        # College Header
+        ws.merge_cells(start_row=row_pos, start_column=1, end_row=row_pos, end_column=len(MAIN_COLS))
+        ws.cell(row=row_pos, column=1).value = f"{col} : {cname}"
+        ws.cell(row=row_pos, column=1).font = Font(bold=True, size=13)
+        ws.cell(row=row_pos, column=1).alignment = Alignment(horizontal="center")
+        row_pos += 2
+
+        # Block Table
+        block = result[result["College"] == col][MAIN_COLS]
+        total = block.sum(numeric_only=True)
+        total["Course"] = "Total"
+        block = pd.concat([block, total.to_frame().T], ignore_index=True)
+
+        for r in dataframe_to_rows(block, index=False, header=True):
+            ws.append(r)
+            for c in range(1, len(r) + 1):
+                ws.cell(row=row_pos, column=c).border = border
+            row_pos += 1
+
+        row_pos += 2  # spacing
+
+    # ===== FINAL GRAND TOTAL =====
     gtotal = result[MAIN_COLS].sum(numeric_only=True)
     gtotal["Course"] = "Grand Total"
+    gtdf = pd.DataFrame([gtotal])
 
-    st.markdown("<h4 style='text-align:center; margin-top:40px;'>Grand Total</h4>", unsafe_allow_html=True)
-    st.dataframe(pd.DataFrame([gtotal]), use_container_width=True)
+    ws.append([])
+    row_pos += 1
+    ws.append(["Grand Total"])
+    ws.cell(row=row_pos, column=1).font = Font(bold=True, size=13)
+    row_pos += 1
+
+    for r in dataframe_to_rows(gtdf, index=False, header=True):
+        ws.append(r)
+        for c in range(1, len(r) + 1):
+            ws.cell(row=row_pos, column=c).border = border
+        row_pos += 1
+
+    # Streamlit Download
+    excel_buffer = io.BytesIO()
+    wb.save(excel_buffer)
+
+    st.download_button(
+        "📥 Download Excel (Formatted – Single Sheet)",
+        data=excel_buffer.getvalue(),
+        file_name="Seat_Distribution.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
