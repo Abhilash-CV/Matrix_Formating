@@ -62,43 +62,52 @@ if uploaded:
     # ========================================================
     # Excel export with FULL formatting
     # ========================================================
+    # ========================================================
+    # Excel export with FULL formatting (FIXED)
+    # ========================================================
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Seat Distribution"
-
+    
     # Borders
-    border = Border(left=Side(style='thin'), right=Side(style='thin'),
-                    top=Side(style='thin'), bottom=Side(style='thin'))
-
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
     # Fonts
     font_normal = Font(name="Times New Roman", size=12)
     font_bold = Font(name="Times New Roman", size=12, bold=True)
     font_white_bold = Font(name="Times New Roman", size=12, bold=True, color="FFFFFF")
-
+    
     # Fills
-    fill_college = PatternFill(fgColor="C65911", fill_type="solid")   # dark orange
-    fill_header = PatternFill(fgColor="F4B183", fill_type="solid")    # medium orange
-    fill_highlight = PatternFill(fgColor="F8CBAD", fill_type="solid") # light orange
-
+    fill_college = PatternFill(fgColor="C65911", fill_type="solid")     # Dark Orange
+    fill_header = PatternFill(fgColor="F4B183", fill_type="solid")      # Orange Header
+    fill_highlight = PatternFill(fgColor="F8CBAD", fill_type="solid")   # Light Highlight
+    
     row_pos = 1
-
-    # ---------------------------- PER COLLEGE BLOCK --------------------------
+    
+    # ========================================================
+    # WRITE COLLEGE BLOCKS MANUALLY (CORRECT FORMATTING)
+    # ========================================================
     for col in result["College"].unique():
-
+    
         cname = college_map.get(col, col)
-
-        # ---------------- COLLEGE TITLE ROW ----------------
+    
+        # ---------------- COLLEGE TITLE ----------------
         ws.merge_cells(start_row=row_pos, start_column=1,
                        end_row=row_pos, end_column=len(MAIN_COLS))
-
-        cell = ws.cell(row=row_pos, column=1)
-        cell.value = f"{col}: {cname}"
-        cell.font = font_white_bold
-        cell.fill = fill_college
-        cell.alignment = Alignment(horizontal="center")
-
+    
+        title_cell = ws.cell(row=row_pos, column=1)
+        title_cell.value = f"{col}: {cname}"
+        title_cell.font = font_white_bold
+        title_cell.fill = fill_college
+        title_cell.alignment = Alignment(horizontal="center")
+    
         row_pos += 1
-
+    
         # ---------------- HEADER ROW ----------------
         for i, h in enumerate(MAIN_COLS, start=1):
             c = ws.cell(row=row_pos, column=i)
@@ -107,40 +116,47 @@ if uploaded:
             c.fill = fill_header
             c.alignment = Alignment(horizontal="center")
             c.border = border
-
+    
         row_pos += 1
-
+    
+        # block data
         block = result[result["College"] == col][MAIN_COLS]
-
-        # add TOTAL row
+    
         total = block.sum(numeric_only=True)
         total["Course"] = "Total"
         block = pd.concat([block, total.to_frame().T], ignore_index=True)
-
+    
         # ---------------- DATA ROWS ----------------
-        for r in dataframe_to_rows(block, index=False, header=False):
-            ws.append(r)
-            for i, v in enumerate(r, start=1):
-                c = ws.cell(row=row_pos, column=i)
+        for r in block.itertuples(index=False):
+            row_pos += 1   # MOVE ROW FIRST (important!)
+    
+            for col_num, v in enumerate(r, start=1):
+    
+                c = ws.cell(row=row_pos, column=col_num)
+                c.value = v
                 c.border = border
-                c.font = font_normal
                 c.alignment = Alignment(horizontal="center")
-
-                if isinstance(v,(int,float)) and v > 0:
+    
+                # Highlight >0
+                if isinstance(v, (int, float)) and v > 0:
                     c.fill = fill_highlight
                     c.font = font_bold
-            row_pos += 1
-
-        row_pos += 2   # spacing
-
-    # ------------------------- DOWNLOAD BUTTON -------------------------
+                else:
+                    c.font = font_normal
+    
+        row_pos += 2  # spacing
+    
+    
+    # ========================================================
+    # DOWNLOAD BUTTON
+    # ========================================================
     excel_buffer = io.BytesIO()
     wb.save(excel_buffer)
-
+    excel_buffer.seek(0)
+    
     st.download_button(
         "📥 Download Excel (FULL Formatted – Screenshot Style)",
         data=excel_buffer.getvalue(),
         file_name="Seat_Distribution_Formatted.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
